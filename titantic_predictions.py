@@ -1,5 +1,6 @@
 # Load libraries
 import pandas
+import csv
 from pandas.plotting import scatter_matrix
 import matplotlib.pyplot as plt 
 from sklearn import model_selection
@@ -13,6 +14,8 @@ from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.naive_bayes import GaussianNB
 from sklearn.svm import SVC
 
+# row 1044 added 0 to fare
+
 # Set training / test data location
 training_file_location = "../data/titanic_data/train.csv"
 test_file_location = "../data/titanic_data/test.csv"
@@ -21,8 +24,9 @@ test_file_location = "../data/titanic_data/test.csv"
 training_dataset = pandas.read_csv(training_file_location)
 test_dataset = pandas.read_csv(test_file_location)
 
+# Prepare the training dataset
 # Drop the columns that do not contribute to the model
-training_dataset = training_dataset.drop(['PassengerId', 'Name', 'Ticket', 'Cabin'], axis=1)
+training_dataset = training_dataset.drop(['PassengerId', 'Name', 'Ticket', 'Cabin', 'Age'], axis=1)
 # Remove the rows with nan's
 training_dataset = training_dataset.dropna()
 # Change the Sex column to values
@@ -31,8 +35,6 @@ gender = {'male': 1,'female': 0}
 embarked = {'C':0, 'Q':1, 'S':2}
 training_dataset.Sex = [gender[item] for item in training_dataset.Sex]
 training_dataset.Embarked = [embarked[item] for item in training_dataset.Embarked]
-
-print(training_dataset.head(20))
 
 # Split-out the validation dataset
 array = training_dataset.values
@@ -68,25 +70,48 @@ for name, model in models:
 	msg = "%s: %f (%f)" % (name, cv_results.mean(), cv_results.std())
 	print(msg)
 
-# Compare Algorithms
-fig = plt.figure()
-fig.suptitle('Algorithm Comparison')
-ax = fig.add_subplot(111)
-plt.boxplot(results)
-ax.set_xticklabels(names)
-plt.show()
-
-lda = LinearDiscriminantAnalysis()
-lda.fit(X_train, Y_train)
-predictions = lda.predict(X_validation)
-print(accuracy_score(Y_validation, predictions))
+lr = LogisticRegression()
+lr.fit(X_train, Y_train)
+predictions = lr.predict(X_validation)
+print("Accuracy score is: " + str(accuracy_score(Y_validation, predictions)))
 print(confusion_matrix(Y_validation, predictions))
 print(classification_report(Y_validation, predictions))
 
+# Get the passenger IDs
+passengerIds = test_dataset['PassengerId']
+# Drop the columns that do not contribute to the model
+test_dataset = test_dataset.drop(['PassengerId','Name', 'Ticket', 'Cabin', 'Age'], axis=1)
+# Remove the rows with nan's
+test_dataset = test_dataset.dropna()
+# Change the Sex column to values
+gender = {'male': 1,'female': 0}
+# Change the Emarkement column to values
+embarked = {'C':0, 'Q':1, 'S':2}
+test_dataset.Sex = [gender[item] for item in test_dataset.Sex]
+test_dataset.Embarked = [embarked[item] for item in test_dataset.Embarked]
+
+# Split-out the test data
+array = test_dataset.values
+X_test = array[:,0:7]
+
 # Predict the training based off the train and test data
-lda = LinearDiscriminantAnalysis()
-lda.fit(X, Y)
-# Get the test data in the correct format
+lr = LogisticRegression()
+lr.fit(X, Y)
+predictions = lr.predict(X_test)
+
+# Write the results to a file
+with open('titanic_submission.csv', 'w') as csvfile:
+	result_writer = csv.writer(csvfile, delimiter=',')
+	result_writer.writerow(['PassengerId','Survived'])
+	i=0
+	for pid in passengerIds:
+		result_writer.writerow([pid, int(predictions[i])])
+		i += 1
+
+
+
+
+
 
 
 
